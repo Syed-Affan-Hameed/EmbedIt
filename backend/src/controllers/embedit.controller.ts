@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { OpenAI } from "openai"; // Adjust the import based on your actual library
 import dotenv from "dotenv";
 import fs from "fs";
+import { MessageContent } from "openai/resources/beta/threads/messages.mjs";
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ export const createVectorStoreAndAddDocuments = async (req: Request, res: Respon
 }
 
 export const createThread  = async (req: Request, res: Response) => {
+
 try {
     const thread = await openai.beta.threads.create({
         messages: [
@@ -78,7 +80,6 @@ try {
 
 
 export const createRun =async(req: Request, res: Response) => {
-
     try {
 
         const run = await openai.beta.threads.runs.createAndPoll(threadId, {
@@ -115,4 +116,42 @@ export const createRun =async(req: Request, res: Response) => {
         res.status(500).json({error:error.message});
     }
 
+    
+
 }
+export const askFollowUp = async (req: Request, res: Response) => {
+    const { followUpQuestion } = req.body; // Expect followUpQuestion in the request body
+
+    try {
+        if (!threadId) {
+            return res.status(400).json({ error: "Thread ID is not initialized. Create a thread first." });
+        }
+
+        const newMessage = await openai.beta.threads.messages.create(threadId, {
+            role: "user",
+            content: followUpQuestion,
+        });
+
+        // Optionally, you can process the assistant's response immediately
+        const run = await openai.beta.threads.runs.createAndPoll(threadId, {
+            assistant_id: assistantId,
+        });
+
+        const messages = await openai.beta.threads.messages.list(threadId, {
+            run_id: run.id,
+        });
+        const lastMessage = messages.data.pop();
+        let responseText = "No response received.";
+        if (lastMessage?.content[0]?.type === "text") {
+            responseText = lastMessage.content[0].text.toString();
+        }
+
+        res.status(200).json({
+            message: "Follow-up question added and assistant responded successfully.",
+            followUpQuestion,
+            response: responseText,
+        });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+};
