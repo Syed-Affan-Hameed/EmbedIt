@@ -1,3 +1,4 @@
+//Endpoints for Step By Step Comprehension.
 import { Request, Response } from "express";
 import { OpenAI } from "openai"; // Adjust the import based on your actual library
 import dotenv from "dotenv";
