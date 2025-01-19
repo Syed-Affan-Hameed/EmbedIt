@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { OpenAI } from "openai"; // Adjust the import based on your actual library
 import dotenv from "dotenv";
 import fs from "fs";
-import { MessageContent } from "openai/resources/beta/threads/messages.mjs";
+import multer from "multer";
+import path from "path";
 
 dotenv.config();
 
@@ -10,10 +11,34 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-let assistantId: string = "";//asst_uCbpp0XvOkNM2VH0I03rFIcd
-let threadId: string = "";//thread_8x3gfVWpT699k17Xt57GfYew
+let assistantId: string = ""; //asst_uCbpp0XvOkNM2VH0I03rFIcd
+let threadId: string = ""; //thread_8x3gfVWpT699k17Xt57GfYew
+let vectorStoreId: string = ""; //vctr_8x3gfVWpT699k17Xt57GfYew
 
-export const createAssistant = async (req: Request, res: Response) => {
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, "./uploads"); // Directory where files will be stored
+    },
+    filename: (req, file, cb) => {
+      cb(null, `${Date.now()}-${file.originalname}`); // Unique file name
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = [".pdf", ".txt", ".docx", ".json"]; // Allowed file types
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error("Only pdf, txt, docx, and json files are allowed!"));
+    }
+    cb(null, true);
+  },
+});
+
+export const createAssistantAndVectorStore = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const assistant = await openai.beta.assistants.create({
       name: "Embedding Model Selection Assistant",
@@ -22,27 +47,79 @@ export const createAssistant = async (req: Request, res: Response) => {
       model: "gpt-3.5-turbo",
       tools: [{ type: "file_search" }],
     });
+    // Create a vector store and store the ID for later use
+    const vectorStore = await openai.beta.vectorStores.create({
+      name: "User Uploaded Embedding Models",
+    });
+    vectorStoreId = vectorStore.id;
     assistantId = assistant.id;
     console.log(assistant);
-    res
-      .status(200)
-      .json({
-        message: "Step 1] Complete: Assistant created successfully",
-        assistant,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Success: Assistant created successfully",
+      assistant,
+    });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Failed to create an assistant",
+      error: error.message,
+    });
   }
 };
+
+export const addDocumentstoVectorStore = async (
+  req: Request,
+  res: Response
+) => {
+  const uploadMiddleware = upload.single("file"); // Expect a 'file' field in the request
+
+  uploadMiddleware(req, res, async (err: any) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const filePath = req.file.path; // Full path of the uploaded file
+
+    try {
+      const fileStreams = [fs.createReadStream(filePath)]; // Create a stream from the uploaded file
+
+      const uploadAndPollResult =
+        await openai.beta.vectorStores.fileBatches.uploadAndPoll(
+          vectorStoreId,
+          {
+            files: fileStreams,
+          }
+        );
+
+      // Clean up the uploaded file after processing
+      await fs.promises.unlink(filePath);
+
+      res.status(200).json({
+        success: true,
+        message: "Vector Store created and document added successfully.",
+        uploadAndPollResult,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+};
+
+
 
 export const createVectorStoreAndAddDocuments = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const fileStreams = ["./backend/src/data/howtoselectembeddingmodelsample.pdf"].map((path) =>
-      fs.createReadStream(path)
-    );
+    const fileStreams = [
+      "./backend/src/data/howtoselectembeddingmodelsample.pdf",
+    ].map((path) => fs.createReadStream(path));
 
     // Create a vector store including our two files.
     let vectorStore = await openai.beta.vectorStores.create({
@@ -57,14 +134,12 @@ export const createVectorStoreAndAddDocuments = async (
       tool_resources: { file_search: { vector_store_ids: [vectorStore.id] } },
     });
 
-    res
-      .status(200)
-      .json({
-        message:
-          "Step 2] Complete: Vector Store created and documents added successfully",
-        vectorStore,
-        uploadAndPollResult,
-      });
+    res.status(200).json({
+      message:
+        "Step 2] Complete: Vector Store created and documents added successfully",
+      vectorStore,
+      uploadAndPollResult,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -77,18 +152,46 @@ export const createThread = async (req: Request, res: Response) => {
         {
           role: "user",
           content:
-            "Can you tell me something about the importance of embeddings in AI?",
+            "Can you tell me something about what I have uploaded in the vector store?",
         },
       ],
     });
     // setting the thread id for global access.
     threadId = thread.id;
 
-    res
-      .status(200)
-      .json({
-        messages: "Step 3] Successful created a thread" + "id:" + threadId,
+    res.status(200).json({
+      messages: "Step 3] Successful created a thread" + "id:" + threadId,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+export const askQuestions = async (req: Request, res: Response) => {
+  const followUpQuestion = req.body.question; // Expect followUpQuestion in the request body
+
+  try {
+
+    if (!threadId) {
+      return res.status(400).json({
+        error: "Thread ID is not initialized. Create a thread first.",
       });
+    }
+
+    // Add the follow-up question to the thread
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: followUpQuestion,
+    });
+
+    // Run the assistant and fetch its response
+    const responseText = await runAssistantWithCitations(threadId, assistantId);
+
+    res.status(200).json({
+      message: "Follow-up question added and assistant responded successfully.",
+      followUpQuestion,
+      response: responseText,
+      citations: responseText.citations,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -112,16 +215,14 @@ export const createRun = async (req: Request, res: Response) => {
 };
 
 export const addFollowUp = async (req: Request, res: Response) => {
-  const  followUpQuestion  = req.body.question; // Expect followUpQuestion in the request body
+  const followUpQuestion = req.body.question; // Expect followUpQuestion in the request body
 
   try {
-    const t=threadId;
+    const t = threadId;
     if (!threadId) {
-      return res
-        .status(400)
-        .json({
-          error: "Thread ID is not initialized. Create a thread first.",
-        });
+      return res.status(400).json({
+        error: "Thread ID is not initialized. Create a thread first.",
+      });
     }
 
     // Add the follow-up question to the thread

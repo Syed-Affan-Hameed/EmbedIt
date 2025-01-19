@@ -1,12 +1,18 @@
 import express from "express";
-import { addFollowUp, createAssistant, createRun, createThread, createVectorStoreAndAddDocuments } from "../controllers/embedit.controller.js";
+import { addDocumentstoVectorStore, addFollowUp, createAssistantAndVectorStore, createRun, createThread, createVectorStoreAndAddDocuments } from "../controllers/embedit.controller.js";
 
 const embeditRouter = express.Router();
 
 
-embeditRouter.post("/createAssistant",async (req, res) => {
-    await createAssistant(req, res);
+embeditRouter.post("/createAssistantWithVectorStore",async (req, res) => {
+    await createAssistantAndVectorStore(req, res);
 });
+
+embeditRouter.post("/addDocuments",async (req, res) => {
+    await addDocumentstoVectorStore(req, res);
+});
+
+
 embeditRouter.post("/createVectorStoreAndAddDocuments",async (req, res) => {
     await createVectorStoreAndAddDocuments(req, res);
 });
