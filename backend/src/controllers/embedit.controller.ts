@@ -40,16 +40,17 @@ export const createAssistantAndVectorStore = async (
   res: Response
 ) => {
   try {
+    const topic = req.body.topicName; // Expect topicName in the request body
     const assistant = await openai.beta.assistants.create({
-      name: "Embedding Model Selection Assistant",
+      name: "AI Assistant",
       instructions:
-        "You are an expert in Selecting Embedding Models. Use your knowledge base to answer questions about selecting the right Embedding models for the development of LLM driven AI-Applications.",
+        `You are an expert in ${topic}. Use your knowledge base to answer questions related to ${topic}.`,
       model: "gpt-3.5-turbo",
       tools: [{ type: "file_search" }],
     });
     // Create a vector store and store the ID for later use
     const vectorStore = await openai.beta.vectorStores.create({
-      name: "User Uploaded Embedding Models",
+      name: "User Uploaded Documents",
     });
     vectorStoreId = vectorStore.id;
     assistantId = assistant.id;
@@ -72,6 +73,10 @@ export const addDocumentstoVectorStore = async (
   req: Request,
   res: Response
 ) => {
+  try {
+    const requestCheck = req.body.topicName;
+    console.log(req.file); // Logs uploaded file details
+    console.log(req.body); // Logs additional fields like topicName
   const uploadMiddleware = upload.single("file"); // Expect a 'file' field in the request
 
   uploadMiddleware(req, res, async (err: any) => {
@@ -85,7 +90,7 @@ export const addDocumentstoVectorStore = async (
 
     const filePath = req.file.path; // Full path of the uploaded file
 
-    try {
+  
       const fileStreams = [fs.createReadStream(filePath)]; // Create a stream from the uploaded file
 
       const uploadAndPollResult =
@@ -104,10 +109,12 @@ export const addDocumentstoVectorStore = async (
         message: "Vector Store created and document added successfully.",
         uploadAndPollResult,
       });
-    } catch (error: any) {
-      res.status(500).json({ success: false, error: error.message });
-    }
+   
   });
+} 
+  catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 
