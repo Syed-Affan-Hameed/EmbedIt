@@ -1,6 +1,6 @@
 import type React from "react"
 import { useState } from "react"
-import { Upload, File, Plus, Loader2 } from "lucide-react"
+import { Upload, File, Plus, Loader2, X } from "lucide-react"
 import axios from "axios"
 
 const Sidebar: React.FC = () => {
@@ -10,6 +10,7 @@ const Sidebar: React.FC = () => {
   const [recentFiles, setRecentFiles] = useState<string[]>(["Document1.pdf", "Notes.txt", "Research.docx"])
   const [assistantCreated, setAssistantCreated] = useState(false)
   const [creatingAssistant, setCreatingAssistant] = useState(false)
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -51,7 +52,7 @@ const Sidebar: React.FC = () => {
       if(response.data.success)
         {
           setRecentFiles((prev) => [file.name, ...prev])
-          alert("File uploaded successfully!")
+          setShowSuccessDialog(true)
           setTopicName("") // Reset topic name after successful upload
       }
 
@@ -86,6 +87,31 @@ const Sidebar: React.FC = () => {
       setCreatingAssistant(false);
     }
   };
+
+  const SuccessDialog = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Success!</h3>
+          <button
+            onClick={() => setShowSuccessDialog(false)}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <p className="text-gray-600 mb-6">
+          File has been uploaded and vectorised successfully. You can now ask questions and chat with your Document.
+        </p>
+        <button
+          onClick={() => setShowSuccessDialog(false)}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  )
 
   if (!assistantCreated) {
     return (
@@ -132,77 +158,80 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-white rounded-lg shadow-sm border">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-semibold text-gray-800">Upload Documents</h2>
-        <p className="text-sm text-gray-500 mt-1">Support for PDF, TXT, DOCX, or JSON</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-4 space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="topicName" className="block text-sm font-medium text-gray-700">
-            Learning Topic Name
-          </label>
-          <input
-            type="text"
-            id="topicName"
-            value={topicName}
-            onChange={(e) => setTopicName(e.target.value)}
-            placeholder="e.g., React Fundamentals, Machine Learning Basics"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            required
-          />
-          <p className="text-xs text-gray-500">This will help organize your learning materials</p>
+    <>
+      <div className="h-full flex flex-col bg-white rounded-lg shadow-sm border">
+        <div className="p-4 border-b">
+          <h2 className="text-lg font-semibold text-gray-800">Upload Documents</h2>
+          <p className="text-sm text-gray-500 mt-1">Support for PDF, TXT, DOCX, or JSON</p>
         </div>
 
-        <div className="flex flex-col items-center justify-center w-full">
-          <label
-            htmlFor="dropzone-file"
-            className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
-          >
-            <div className="flex flex-col items-center justify-center pt-5 pb-6">
-              <Upload className="w-10 h-10 mb-3 text-gray-400" />
-              <p className="mb-2 text-sm text-gray-500">
-                <span className="font-semibold">Click to upload</span> or drag and drop
-              </p>
-              <p className="text-xs text-gray-500">Maximum file size: 10MB</p>
-            </div>
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div className="space-y-2">
+            <label htmlFor="topicName" className="block text-sm font-medium text-gray-700">
+              Learning Topic Name
+            </label>
             <input
-              id="dropzone-file"
-              type="file"
-              className="hidden"
-              onChange={handleFileChange}
-              accept=".pdf,.txt,.docx,.json"
+              type="text"
+              id="topicName"
+              value={topicName}
+              onChange={(e) => setTopicName(e.target.value)}
+              placeholder="e.g., React Fundamentals, Machine Learning Basics"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              required
             />
-          </label>
-        </div>
-        {file && (
-          <div className="p-3 bg-blue-50 rounded-lg flex items-center">
-            <File className="w-5 h-5 text-blue-500 mr-2" />
-            <span className="text-sm text-gray-600 truncate">{file.name}</span>
+            <p className="text-xs text-gray-500">This will help organize your learning materials</p>
           </div>
-        )}
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
-          disabled={!file || uploading || !topicName.trim()}
-        >
-          {uploading ? "Uploading..." : "Upload File"}
-        </button>
-      </form>
 
-      <div className="mt-auto p-4 border-t">
-        <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Files</h3>
-        <ul className="space-y-2">
-          {recentFiles.map((fileName, index) => (
-            <li key={index} className="flex items-center text-sm text-gray-600">
-              <File className="w-4 h-4 mr-2 text-gray-400" />
-              <span className="truncate">{fileName}</span>
-            </li>
-          ))}
-        </ul>
+          <div className="flex flex-col items-center justify-center w-full">
+            <label
+              htmlFor="dropzone-file"
+              className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <Upload className="w-10 h-10 mb-3 text-gray-400" />
+                <p className="mb-2 text-sm text-gray-500">
+                  <span className="font-semibold">Click to upload</span> or drag and drop
+                </p>
+                <p className="text-xs text-gray-500">Maximum file size: 10MB</p>
+              </div>
+              <input
+                id="dropzone-file"
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+                accept=".pdf,.txt,.docx,.json"
+              />
+            </label>
+          </div>
+          {file && (
+            <div className="p-3 bg-blue-50 rounded-lg flex items-center">
+              <File className="w-5 h-5 text-blue-500 mr-2" />
+              <span className="text-sm text-gray-600 truncate">{file.name}</span>
+            </div>
+          )}
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+            disabled={!file || uploading || !topicName.trim()}
+          >
+            {uploading ? "Uploading..." : "Upload File"}
+          </button>
+        </form>
+
+        <div className="mt-auto p-4 border-t">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Recent Files</h3>
+          <ul className="space-y-2">
+            {recentFiles.map((fileName, index) => (
+              <li key={index} className="flex items-center text-sm text-gray-600">
+                <File className="w-4 h-4 mr-2 text-gray-400" />
+                <span className="truncate">{fileName}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
-    </div>
+      {showSuccessDialog && <SuccessDialog />}
+    </>
   )
 }
 
