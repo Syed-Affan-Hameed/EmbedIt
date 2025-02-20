@@ -19,7 +19,7 @@ let vectorStoreId: string = ""; //vctr_8x3gfVWpT699k17Xt57GfYew
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, "./uploads"); // Directory where files will be stored
+      cb(null, "../../uploads"); // Directory where files will be stored
     },
     filename: (req, file, cb) => {
       cb(null, `${Date.now()}-${file.originalname}`); // Unique file name
