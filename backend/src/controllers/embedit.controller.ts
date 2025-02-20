@@ -42,7 +42,7 @@ export const createAssistantAndVectorStore = async (
   try {
     const topic = req.body.topicName; // Expect topicName in the request body
     const assistant = await openai.beta.assistants.create({
-      name: "AI Assistant",
+      name: `AI Assistant`,
       instructions:
         `You are an expert in ${topic}. Use your knowledge base to answer questions related to ${topic}.`,
       model: "gpt-3.5-turbo",

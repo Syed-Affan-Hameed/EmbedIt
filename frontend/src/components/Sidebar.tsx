@@ -34,6 +34,7 @@ const Sidebar: React.FC = () => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("topicName", topicName)
+    console.log("Form Data: ", formData);
 
     try {
       for (const pair of formData.entries()) {
