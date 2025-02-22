@@ -1,5 +1,5 @@
 import express from "express";
-import { addDocumentstoVectorStore, addFollowUp, askQuestions, createAssistantAndVectorStore, createRun, createThread, createThreadForAssistant, createVectorStoreAndAddDocuments, upload } from "../controllers/embedit.controller.js";
+import { addContextDocumentstoThreadVectorStore, addDocumentstoVectorStore, addFollowUp, askQuestions, createAssistantAndVectorStore, createRun, createThread, createThreadForAssistant, createVectorStoreAndAddDocuments, upload } from "../controllers/embedit.controller.js";
 
 const embeditRouter = express.Router();
 
@@ -15,6 +15,9 @@ embeditRouter.post("/createRun",async (req, res) => {
 });
 embeditRouter.post("/askQuestions",async (req, res) => {
     await askQuestions(req, res);
+});
+embeditRouter.post("/uploadContextFiles",  upload.single("file")  ,async (req, res) => {
+    await addContextDocumentstoThreadVectorStore(req, res);
 });
 
 embeditRouter.post("/createThread",async (req, res) => {

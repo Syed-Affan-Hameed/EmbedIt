@@ -165,7 +165,38 @@ export const askQuestions = async (req: Request, res: Response) => {
 };
 
 
+export const addContextDocumentstoThreadVectorStore = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    console.log("Received file:", req.file);
+    console.log("Received body:", req.body);
 
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const filePath = convertPath(req.file.path);
+
+    const fileStreams = [filePath].map((path) =>
+      fs.createReadStream(path),
+    );
+
+    const uploadAndPollResult = await openai.beta.vectorStores.fileBatches.uploadAndPoll(vectorStoreId,    {
+                 files: fileStreams,
+      });
+
+    res.status(200).json({
+      success: true,
+      message: "Message context Document added to the thread vector store successfully.",
+      uploadAndPollResult,
+    });
+  } catch (error: any) {
+    console.log("Error!!:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
 
 
 ///////////////////////
