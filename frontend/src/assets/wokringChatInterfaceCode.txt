@@ -5,12 +5,6 @@ interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
-  citations?: string[];
-}
-
-interface AIResponse {
-  text: string;
-  citations?: string[];
 }
 
 const ChatInterface: React.FC = () => {
@@ -55,26 +49,18 @@ const ChatInterface: React.FC = () => {
 
       const data = await response.json();
       
-      // Parse the response data
-      let aiResponse: AIResponse;
-      try {
-        // Handle case where response is already parsed JSON
-        aiResponse = typeof data.assistantResponse === 'object' 
-          ? data.assistantResponse
-          : JSON.parse(data.assistantResponse);
-      } catch (e) {
-        // Fallback if parsing fails
-        aiResponse = {
-          text: String(data.assistantResponse),
-          citations: []
-        };
-      }
+      // Add this console.log to see the exact structure of the response
+      console.log('API Response:', data);
+      
+      // Handle the response based on its structure
+      const assistantResponseText = typeof data.assistantResponse === 'object' 
+        ? JSON.stringify(data.assistantResponse)
+        : String(data.assistantResponse || 'No response received');
 
       const botMessage: Message = {
-        text: aiResponse.text,
+        text: assistantResponseText,
         isUser: false,
-        timestamp: new Date(),
-        citations: aiResponse.citations
+        timestamp: new Date()
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -89,34 +75,6 @@ const ChatInterface: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const MessageContent: React.FC<{ message: Message }> = ({ message }) => {
-    return (
-      <div className="space-y-2">
-        <div className="whitespace-pre-wrap text-sm">{message.text}</div>
-        
-        {message.citations && message.citations.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <p className="text-xs font-medium text-gray-500 mb-1">Sources:</p>
-            <div className="space-y-1">
-              {message.citations.map((citation, index) => (
-                <div 
-                  key={index}
-                  className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
-                >
-                  {citation}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        <span className="text-xs opacity-75 block">
-          {message.timestamp.toLocaleTimeString()}
-        </span>
-      </div>
-    );
   };
 
   return (
@@ -154,7 +112,10 @@ const ChatInterface: React.FC = () => {
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  <MessageContent message={message} />
+                  <p className="text-sm whitespace-pre-wrap">{message.text}</p>
+                  <span className="text-xs opacity-75 mt-1 block">
+                    {message.timestamp.toLocaleTimeString()}
+                  </span>
                 </div>
               </div>
             </div>

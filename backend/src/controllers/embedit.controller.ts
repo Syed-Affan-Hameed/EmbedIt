@@ -118,7 +118,7 @@ export const createThreadForAssistant = async () => {
         {
           role: "user",
           content:
-            "Analyse my document carefully and answer my question as though you are chatting with a friend",
+            "Analyze my document carefully and answer my questions as though you are chatting with a friend",
         },
       ],
     });
@@ -156,7 +156,7 @@ export const askQuestions = async (req: Request, res: Response) => {
     res.status(200).json({
       message: "Follow-up question added and assistant responded successfully.",
       followUpQuestion,
-      response: responseText,
+      assistantResponse: responseText,
       citations: responseText.citations,
     });
   } catch (error: any) {

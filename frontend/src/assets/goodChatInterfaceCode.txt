@@ -5,18 +5,11 @@ interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
-  citations?: string[];
-}
-
-interface AIResponse {
-  text: string;
-  citations?: string[];
 }
 
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -29,94 +22,25 @@ const ChatInterface: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim()) return;
 
-    const userMessage: Message = {
-      text: input,
+    const userMessage: Message = { 
+      text: input, 
       isUser: true,
       timestamp: new Date()
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setIsLoading(true);
 
-    try {
-      const response = await fetch('http://localhost:5009/api/v1/embedit/askQuestions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question: input }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response from AI');
-      }
-
-      const data = await response.json();
-      
-      // Parse the response data
-      let aiResponse: AIResponse;
-      try {
-        // Handle case where response is already parsed JSON
-        aiResponse = typeof data.assistantResponse === 'object' 
-          ? data.assistantResponse
-          : JSON.parse(data.assistantResponse);
-      } catch (e) {
-        // Fallback if parsing fails
-        aiResponse = {
-          text: String(data.assistantResponse),
-          citations: []
-        };
-      }
-
-      const botMessage: Message = {
-        text: aiResponse.text,
-        isUser: false,
-        timestamp: new Date(),
-        citations: aiResponse.citations
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error in handleSubmit:', error);
-      const errorMessage: Message = {
-        text: "Sorry, I encountered an error while processing your request. Please try again.",
+    // Simulate AI response
+    setTimeout(() => {
+      const botMessage: Message = { 
+        text: "I'm analyzing your document and preparing a response...", 
         isUser: false,
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const MessageContent: React.FC<{ message: Message }> = ({ message }) => {
-    return (
-      <div className="space-y-2">
-        <div className="whitespace-pre-wrap text-sm">{message.text}</div>
-        
-        {message.citations && message.citations.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <p className="text-xs font-medium text-gray-500 mb-1">Sources:</p>
-            <div className="space-y-1">
-              {message.citations.map((citation, index) => (
-                <div 
-                  key={index}
-                  className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
-                >
-                  {citation}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        <span className="text-xs opacity-75 block">
-          {message.timestamp.toLocaleTimeString()}
-        </span>
-      </div>
-    );
+      setMessages(prev => [...prev, botMessage]);
+    }, 1000);
   };
 
   return (
@@ -154,7 +78,10 @@ const ChatInterface: React.FC = () => {
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
-                  <MessageContent message={message} />
+                  <p className="text-sm">{message.text}</p>
+                  <span className="text-xs opacity-75 mt-1 block">
+                    {message.timestamp.toLocaleTimeString()}
+                  </span>
                 </div>
               </div>
             </div>
@@ -171,12 +98,11 @@ const ChatInterface: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question about your documents..."
             className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={isLoading}
           />
           <button
             type="submit"
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
-            disabled={!input.trim() || isLoading}
+            disabled={!input.trim()}
           >
             <Send className="w-5 h-5" />
           </button>
@@ -187,3 +113,4 @@ const ChatInterface: React.FC = () => {
 };
 
 export default ChatInterface;
+
