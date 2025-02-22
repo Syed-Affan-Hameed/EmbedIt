@@ -7,7 +7,7 @@ const Sidebar: React.FC = () => {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
   const [topicName, setTopicName] = useState("")
-  const [recentFiles, setRecentFiles] = useState<string[]>(["Document1.pdf", "Notes.txt", "Research.docx"])
+  const [recentFiles, setRecentFiles] = useState<string[]>(["Notes.txt", "Research.docx"])
   const [assistantCreated, setAssistantCreated] = useState(false)
   const [creatingAssistant, setCreatingAssistant] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
