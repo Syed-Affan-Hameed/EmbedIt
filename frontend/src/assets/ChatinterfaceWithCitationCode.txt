@@ -1,0 +1,189 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User } from 'lucide-react';
+
+interface Message {
+  text: string;
+  isUser: boolean;
+  timestamp: Date;
+  citations?: string[];
+}
+
+interface AIResponse {
+  text: string;
+  citations?: string[];
+}
+
+const ChatInterface: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      text: input,
+      isUser: true,
+      timestamp: new Date()
+    };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5009/api/v1/embedit/askQuestions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question: input }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from AI');
+      }
+
+      const data = await response.json();
+      
+      // Parse the response data
+      let aiResponse: AIResponse;
+      try {
+        // Handle case where response is already parsed JSON
+        aiResponse = typeof data.assistantResponse === 'object' 
+          ? data.assistantResponse
+          : JSON.parse(data.assistantResponse);
+      } catch (e) {
+        // Fallback if parsing fails
+        aiResponse = {
+          text: String(data.assistantResponse),
+          citations: []
+        };
+      }
+
+      const botMessage: Message = {
+        text: aiResponse.text,
+        isUser: false,
+        timestamp: new Date(),
+        citations: aiResponse.citations
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error in handleSubmit:', error);
+      const errorMessage: Message = {
+        text: "Sorry, I encountered an error while processing your request. Please try again.",
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const MessageContent: React.FC<{ message: Message }> = ({ message }) => {
+    return (
+      <div className="space-y-2">
+        <div className="whitespace-pre-wrap text-sm">{message.text}</div>
+        
+        {message.citations && message.citations.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-gray-200">
+            <p className="text-xs font-medium text-gray-500 mb-1">Sources:</p>
+            <div className="space-y-1">
+              {message.citations.map((citation, index) => (
+                <div 
+                  key={index}
+                  className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
+                >
+                  {citation}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <span className="text-xs opacity-75 block">
+          {message.timestamp.toLocaleTimeString()}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border">
+      <div className="p-4 border-b">
+        <h2 className="text-lg font-semibold text-gray-800">Chat Assistant</h2>
+        <p className="text-sm text-gray-500">Ask questions about your documents</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
+            <Bot className="w-12 h-12 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No messages yet</h3>
+            <p className="text-sm">Upload a document and start asking questions!</p>
+          </div>
+        ) : (
+          messages.map((message, index) => (
+            <div
+              key={index}
+              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className="flex items-start max-w-[80%] space-x-2">
+                <div className={`p-1 rounded-full ${message.isUser ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                  {message.isUser ? (
+                    <User className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <Bot className="w-4 h-4 text-gray-600" />
+                  )}
+                </div>
+                <div
+                  className={`p-3 rounded-lg ${
+                    message.isUser 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  <MessageContent message={message} />
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-4 border-t bg-gray-50">
+        <div className="flex space-x-4">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a question about your documents..."
+            className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+            disabled={!input.trim() || isLoading}
+          >
+            <Send className="w-5 h-5" />
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+};
+
+export default ChatInterface;
