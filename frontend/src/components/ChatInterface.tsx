@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Paperclip } from 'lucide-react';
+import { Send, Bot, User, Paperclip, X } from 'lucide-react';
 import axios from "axios";
+
 interface Message {
   text: string;
   isUser: boolean;
@@ -41,7 +42,6 @@ const ChatInterface: React.FC = () => {
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setFile(null);
     setIsLoading(true);
 
     await handleFileUpload(e);
@@ -88,46 +88,38 @@ const ChatInterface: React.FC = () => {
       setIsLoading(false);
     }
   };
-   const handleContextFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      if (event.target.files && event.target.files.length > 0) {
-        setFile(event.target.files[0]);
-        console.log(event.target.files[0]);
-      }
+
+  const handleContextFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      setFile(event.target.files[0]);
     }
+  };
 
   const handleFileUpload = async (event: React.FormEvent) => {
-    event.preventDefault()
+    event.preventDefault();
     if (!file) {
-      // alert("Please select a file first!")
-      return
+      return;
     }
 
     const formData = new FormData();
-    formData.append("file", file)
-    // formData.append("topicName", topicName)
+    formData.append("file", file);
     console.log("Form Data: ", formData);
 
     try {
-
-      const response = await axios.post("http://localhost:5009/api/v1/embedit/addDocuments", formData, {
+      const response = await axios.post("http://localhost:5009/api/v1/embedit/uploadContextFiles", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         }
       });
-
- 
       
-      if(response.data.success)
-        {
-          console.log("Success uploading file:", response.data) // Reset topic name after successful upload
+      if (response.data.success) {
+        console.log("Success uploading file:", response.data);
       }
-
     } catch (error) {
-      console.error("Error uploading file:", error)
-      alert("Error uploading file. Please try again.")
-    } 
-    finally {
-      setFile(null)
+      console.error("Error uploading file:", error);
+      alert("Error uploading file. Please try again.");
+    } finally {
+      setFile(null);
     }
   };
 
@@ -162,6 +154,14 @@ const ChatInterface: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="p-4 border-t bg-gray-50">
+        {file && (
+          <div className="flex items-center p-2 mb-2 bg-gray-200 rounded-md text-sm text-gray-700">
+            📎 {file.name}
+            <button className="ml-2 text-red-500" onClick={() => setFile(null)}>
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
         <div className="flex space-x-4">
           <input
             type="text"
@@ -171,16 +171,15 @@ const ChatInterface: React.FC = () => {
             className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
             disabled={isLoading}
           />
-         
           <label htmlFor="fileInput" className="cursor-pointer text-gray-500 hover:text-gray-700">
             <Paperclip className="w-5 h-5 mt-2" />
             <input
-                id="fileInput"
-                type="file"
-                className="hidden"
-                onChange={handleContextFileChange}
-                accept=".pdf,.txt,.docx,.json"
-              />
+              id="fileInput"
+              type="file"
+              className="hidden"
+              onChange={handleContextFileChange}
+              accept=".pdf,.txt,.docx,.json"
+            />
           </label>
           <button
             type="submit"
