@@ -13,8 +13,9 @@ const Sidebar: React.FC = () => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setFile(event.target.files[0])
+    if (event.target.files && event.target.files.length > 0) {
+      setFile(event.target.files[0]);
+      console.log(event.target.files[0]);
     }
   }
 
@@ -31,16 +32,14 @@ const Sidebar: React.FC = () => {
     }
 
     setUploading(true)
-    const formData = new FormData()
+    const formData = new FormData();
     formData.append("file", file)
     formData.append("topicName", topicName)
     console.log("Form Data: ", formData);
+    console.log(file,topicName);
 
     try {
-      for (const pair of formData.entries()) {
-        console.log(`${pair[0]}: ${pair[1]}`);
-      }
-      
+
       const response = await axios.post("http://localhost:5009/api/v1/embedit/addDocuments", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
@@ -60,7 +59,8 @@ const Sidebar: React.FC = () => {
     } catch (error) {
       console.error("Error uploading file:", error)
       alert("Error uploading file. Please try again.")
-    } finally {
+    } 
+    finally {
       setUploading(false)
       setFile(null)
     }
