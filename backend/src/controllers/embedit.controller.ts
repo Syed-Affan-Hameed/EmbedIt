@@ -85,8 +85,6 @@ export const addDocumentstoVectorStore = async (req: Request, res: Response) => 
 
     const filePath = convertPath(req.file.path);
 
-    const fileStreams2 = [fs.createReadStream(filePath)];
-
     const fileStreams = [filePath].map((path) =>
       fs.createReadStream(path),
     );
@@ -109,6 +107,65 @@ export const addDocumentstoVectorStore = async (req: Request, res: Response) => 
 };
 
 
+export const createThread = async (req: Request, res: Response) => {
+  try {
+    const thread = await openai.beta.threads.create({
+      messages: [
+        {
+          role: "user",
+          content:
+            "Give me brief summary of the attached document in 100 words?",
+        },
+      ],
+    });
+    // setting the thread id for global access.
+    threadId = thread.id;
+
+    res.status(200).json({
+      messages: "Step 3] Successful created a thread" + "id:" + threadId,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+export const askQuestions = async (req: Request, res: Response) => {
+  const followUpQuestion = req.body.question; // Expect followUpQuestion in the request body
+
+  try {
+
+    if (!threadId) {
+      return res.status(400).json({
+        error: "Thread ID is not initialized. Create a thread first.",
+      });
+    }
+
+    // Add the follow-up question to the thread
+    await openai.beta.threads.messages.create(threadId, {
+      role: "user",
+      content: followUpQuestion,
+    });
+
+    // Run the assistant and fetch its response
+    const responseText = await runAssistantWithCitations(threadId, assistantId);
+
+    res.status(200).json({
+      message: "Follow-up question added and assistant responded successfully.",
+      followUpQuestion,
+      response: responseText,
+      citations: responseText.citations,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+
+
+///////////////////////
 
 
 export const createVectorStoreAndAddDocuments = async (
@@ -144,14 +201,14 @@ export const createVectorStoreAndAddDocuments = async (
   }
 };
 
-export const createThread = async (req: Request, res: Response) => {
+export const createThread2 = async (req: Request, res: Response) => {
   try {
     const thread = await openai.beta.threads.create({
       messages: [
         {
           role: "user",
           content:
-            "Can you tell me something about what I have uploaded in the vector store?",
+            "Give me accurate answers from the document i have uploaded",
         },
       ],
     });
@@ -165,7 +222,8 @@ export const createThread = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
-export const askQuestions = async (req: Request, res: Response) => {
+
+export const askQuestions2 = async (req: Request, res: Response) => {
   const followUpQuestion = req.body.question; // Expect followUpQuestion in the request body
 
   try {
@@ -196,6 +254,8 @@ export const askQuestions = async (req: Request, res: Response) => {
   }
 };
 
+
+
 export const createRun = async (req: Request, res: Response) => {
   try {
     const { text, citations } = await runAssistantWithCitations(
@@ -212,6 +272,9 @@ export const createRun = async (req: Request, res: Response) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+
 
 export const addFollowUp = async (req: Request, res: Response) => {
   const followUpQuestion = req.body.question; // Expect followUpQuestion in the request body
