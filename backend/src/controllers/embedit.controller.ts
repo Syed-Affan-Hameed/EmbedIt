@@ -119,10 +119,7 @@ export const createAssistantAndVectorStore = async (
 //     res.status(500).json({ success: false, error: error.message });
 //   }
 // };
-function createReadStreamFromWindowsPath(winPath:string) {
-  const normalizedPath = path.normalize(winPath); // Converts to the correct format
-  return fs.createReadStream(normalizedPath);
-}
+
 function convertPath(path:string) {
   return path.replace(/\\/g, '/');
 }
