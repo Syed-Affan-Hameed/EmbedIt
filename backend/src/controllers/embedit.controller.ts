@@ -91,13 +91,17 @@ export const addDocumentstoVectorStore = async (req: Request, res: Response) => 
    
     const uploadAndPollResult = await openai.beta.vectorStores.fileBatches.uploadAndPoll(vectorStoreId,    {
                  files: fileStreams,
-      })
+      });
 
-    await fs.promises.unlink(filePath);
+    await openai.beta.assistants.update(assistantId, {
+      tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
+    });
+    //creating thread for the assistant to store conversation memory
+    createThreadForAssistant();
 
     res.status(200).json({
       success: true,
-      message: "Vector Store created and document added successfully.",
+      message: "Vector Store created for the assistant and document added successfully.",
       uploadAndPollResult,
     });
   } catch (error: any) {
@@ -107,25 +111,24 @@ export const addDocumentstoVectorStore = async (req: Request, res: Response) => 
 };
 
 
-export const createThread = async (req: Request, res: Response) => {
+export const createThreadForAssistant = async () => {
   try {
     const thread = await openai.beta.threads.create({
       messages: [
         {
           role: "user",
           content:
-            "Give me brief summary of the attached document in 100 words?",
+            "Analyse my document carefully and answer my question as though you are chatting with a friend",
         },
       ],
     });
     // setting the thread id for global access.
     threadId = thread.id;
 
-    res.status(200).json({
-      messages: "Step 3] Successful created a thread" + "id:" + threadId,
-    });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+
+    throw new Error(`Failed to create a thread: ${error.message}`);
+
   }
 };
 
@@ -201,7 +204,7 @@ export const createVectorStoreAndAddDocuments = async (
   }
 };
 
-export const createThread2 = async (req: Request, res: Response) => {
+export const createThread = async (req: Request, res: Response) => {
   try {
     const thread = await openai.beta.threads.create({
       messages: [

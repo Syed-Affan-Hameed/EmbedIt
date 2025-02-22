@@ -1,5 +1,5 @@
 import express from "express";
-import { addDocumentstoVectorStore, addFollowUp, askQuestions, createAssistantAndVectorStore, createRun, createThread, createVectorStoreAndAddDocuments, upload } from "../controllers/embedit.controller.js";
+import { addDocumentstoVectorStore, addFollowUp, askQuestions, createAssistantAndVectorStore, createRun, createThread, createThreadForAssistant, createVectorStoreAndAddDocuments, upload } from "../controllers/embedit.controller.js";
 
 const embeditRouter = express.Router();
 
@@ -17,7 +17,7 @@ embeditRouter.post("/createRun",async (req, res) => {
     await createRun(req, res);
 });
 embeditRouter.post("/askQuestions",async (req, res) => {
-    await addFollowUp(req, res);
+    await askQuestions(req, res);
 });
 
 
