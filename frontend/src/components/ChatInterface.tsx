@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User } from 'lucide-react';
-
+import { Send, Bot, User, Paperclip } from 'lucide-react';
+import axios from "axios";
 interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
   citations?: string[];
+  fileName?: string;
 }
 
 interface AIResponse {
@@ -16,6 +17,7 @@ interface AIResponse {
 const ChatInterface: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -34,11 +36,15 @@ const ChatInterface: React.FC = () => {
     const userMessage: Message = {
       text: input,
       isUser: true,
-      timestamp: new Date()
+      timestamp: new Date(),
+      fileName: file ? file.name : undefined
     };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
+    setFile(null);
     setIsLoading(true);
+
+    await handleFileUpload(e);
 
     try {
       const response = await fetch('http://localhost:5009/api/v1/embedit/askQuestions', {
@@ -55,15 +61,12 @@ const ChatInterface: React.FC = () => {
 
       const data = await response.json();
       
-      // Parse the response data
       let aiResponse: AIResponse;
       try {
-        // Handle case where response is already parsed JSON
         aiResponse = typeof data.assistantResponse === 'object' 
           ? data.assistantResponse
           : JSON.parse(data.assistantResponse);
       } catch (e) {
-        // Fallback if parsing fails
         aiResponse = {
           text: String(data.assistantResponse),
           citations: []
@@ -80,43 +83,52 @@ const ChatInterface: React.FC = () => {
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('Error in handleSubmit:', error);
-      const errorMessage: Message = {
-        text: "Sorry, I encountered an error while processing your request. Please try again.",
-        isUser: false,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, { text: "Error processing request.", isUser: false, timestamp: new Date() }]);
     } finally {
       setIsLoading(false);
     }
   };
+   const handleContextFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (event.target.files && event.target.files.length > 0) {
+        setFile(event.target.files[0]);
+        console.log(event.target.files[0]);
+      }
+    }
 
-  const MessageContent: React.FC<{ message: Message }> = ({ message }) => {
-    return (
-      <div className="space-y-2">
-        <div className="whitespace-pre-wrap text-sm">{message.text}</div>
-        
-        {message.citations && message.citations.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-gray-200">
-            <p className="text-xs font-medium text-gray-500 mb-1">Sources:</p>
-            <div className="space-y-1">
-              {message.citations.map((citation, index) => (
-                <div 
-                  key={index}
-                  className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1"
-                >
-                  {citation}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
-        <span className="text-xs opacity-75 block">
-          {message.timestamp.toLocaleTimeString()}
-        </span>
-      </div>
-    );
+  const handleFileUpload = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (!file) {
+      // alert("Please select a file first!")
+      return
+    }
+
+    const formData = new FormData();
+    formData.append("file", file)
+    // formData.append("topicName", topicName)
+    console.log("Form Data: ", formData);
+
+    try {
+
+      const response = await axios.post("http://localhost:5009/api/v1/embedit/addDocuments", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        }
+      });
+
+ 
+      
+      if(response.data.success)
+        {
+          console.log("Success uploading file:", response.data) // Reset topic name after successful upload
+      }
+
+    } catch (error) {
+      console.error("Error uploading file:", error)
+      alert("Error uploading file. Please try again.")
+    } 
+    finally {
+      setFile(null)
+    }
   };
 
   return (
@@ -127,39 +139,25 @@ const ChatInterface: React.FC = () => {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-gray-500">
-            <Bot className="w-12 h-12 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No messages yet</h3>
-            <p className="text-sm">Upload a document and start asking questions!</p>
-          </div>
-        ) : (
-          messages.map((message, index) => (
-            <div
-              key={index}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className="flex items-start max-w-[80%] space-x-2">
-                <div className={`p-1 rounded-full ${message.isUser ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                  {message.isUser ? (
-                    <User className="w-4 h-4 text-blue-600" />
-                  ) : (
-                    <Bot className="w-4 h-4 text-gray-600" />
-                  )}
-                </div>
-                <div
-                  className={`p-3 rounded-lg ${
-                    message.isUser 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  <MessageContent message={message} />
-                </div>
+        {messages.map((message, index) => (
+          <div key={index} className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className="flex items-start max-w-[80%] space-x-2">
+              <div className={`p-1 rounded-full ${message.isUser ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                {message.isUser ? <User className="w-4 h-4 text-blue-600" /> : <Bot className="w-4 h-4 text-gray-600" />}
+              </div>
+              <div className={`p-3 rounded-lg ${message.isUser ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                <div>{message.text}</div>
+                {message.fileName && (
+                  <div className="text-xs text-white mt-1 underline">📎 {message.fileName}</div>
+                )}
+                {message.citations && message.citations.map((citation, i) => (
+                  <div key={i} className="text-xs text-gray-600 bg-gray-50 rounded px-2 py-1 mt-1">{citation}</div>
+                ))}
+                <span className="text-xs opacity-75 block mt-2">{message.timestamp.toLocaleTimeString()}</span>
               </div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
         <div ref={messagesEndRef} />
       </div>
 
@@ -170,12 +168,23 @@ const ChatInterface: React.FC = () => {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask a question about your documents..."
-            className="flex-1 min-w-0 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none"
             disabled={isLoading}
           />
+         
+          <label htmlFor="fileInput" className="cursor-pointer text-gray-500 hover:text-gray-700">
+            <Paperclip className="w-5 h-5 mt-2" />
+            <input
+                id="fileInput"
+                type="file"
+                className="hidden"
+                onChange={handleContextFileChange}
+                accept=".pdf,.txt,.docx,.json"
+              />
+          </label>
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
             disabled={!input.trim() || isLoading}
           >
             <Send className="w-5 h-5" />

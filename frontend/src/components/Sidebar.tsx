@@ -34,7 +34,7 @@ const Sidebar: React.FC = () => {
     setUploading(true)
     const formData = new FormData();
     formData.append("file", file)
-    formData.append("topicName", topicName)
+    // formData.append("topicName", topicName)
     console.log("Form Data: ", formData);
     console.log(file,topicName);
 
@@ -43,8 +43,7 @@ const Sidebar: React.FC = () => {
       const response = await axios.post("http://localhost:5009/api/v1/embedit/addDocuments", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-        },
-
+        }
       });
 
  
@@ -89,7 +88,7 @@ const Sidebar: React.FC = () => {
     }
   };
 
-  const SuccessDialog = () => (
+   const SuccessDialog = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
         <div className="flex justify-between items-start mb-4">
@@ -131,7 +130,7 @@ const Sidebar: React.FC = () => {
               id="topicName"
               value={topicName}
               onChange={(e) => setTopicName(e.target.value)}
-              placeholder="e.g., React Fundamentals, Machine Learning Basics"
+              placeholder="e.g., RAG, Vector Databases, React Fundamentals, Machine Learning Basics"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               required
             />
