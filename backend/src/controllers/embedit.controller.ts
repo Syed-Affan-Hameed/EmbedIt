@@ -69,56 +69,6 @@ export const createAssistantAndVectorStore = async (
   }
 };
 
-// export const addDocumentstoVectorStore = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     const requestCheck = req.body.topicName;
-//     console.log(req);
-//     console.log(requestCheck);
-//     //@ts-ignore
-//     console.log(req.topicName);
-//     console.log(req.file); // Logs uploaded file details
-//     console.log(req.body); // Logs additional fields like topicName
-//   const uploadMiddleware = upload.single("file"); // Expect a 'file' field in the request
-//   uploadMiddleware(req, res, async (err: any) => {
-//     if (err) {
-//       return res.status(400).json({ error: err.message });
-//     }
-
-//     if (!req.file) {
-//       return res.status(400).json({ error: "No file uploaded" });
-//     }
-
-//     const filePath = req.file.path; // Full path of the uploaded file
-
-  
-//       const fileStreams = [fs.createReadStream(filePath)]; // Create a stream from the uploaded file
-
-//       const uploadAndPollResult =
-//         await openai.beta.vectorStores.fileBatches.uploadAndPoll(
-//           vectorStoreId,
-//           {
-//             files: fileStreams,
-//           }
-//         );
-
-//       // Clean up the uploaded file after processing
-//       await fs.promises.unlink(filePath);
-
-//       res.status(200).json({
-//         success: true,
-//         message: "Vector Store created and document added successfully.",
-//         uploadAndPollResult,
-//       });
-   
-//   });
-// } 
-//   catch (error: any) {
-//     res.status(500).json({ success: false, error: error.message });
-//   }
-// };
 
 function convertPath(path:string) {
   return path.replace(/\\/g, '/');
