@@ -45,7 +45,8 @@ export const createAssistantAndVectorStore = async (
       name: `AI Assistant`,
       instructions:
         `You are an expert in ${topic}. Use your knowledge base to answer questions related to ${topic}.`,
-      model: "gpt-3.5-turbo",
+      model:"gpt-4o-mini",
+      //model:"gpt-3.5-turbo", // Use the GPT-3.5-turbo model for simple 7 super cheap testing testing
       tools: [{ type: "file_search" }],
     });
     // Create a vector store and store the ID for later use
