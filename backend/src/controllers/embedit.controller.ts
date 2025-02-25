@@ -70,7 +70,7 @@ export const createAssistantAndVectorStore = async (
   }
 };
 
-
+//Converts the path from // to / which can be understood by the program and filestream(s) can be created.
 function convertPath(path:string) {
   return path.replace(/\\/g, '/');
 }
